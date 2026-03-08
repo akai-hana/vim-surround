@@ -263,16 +263,8 @@ function! s:wrap(string,char,type,removed,special)
     elseif keeper =~ '\n$' && after =~ '^\n'
       let after = strpart(after,1)
     endif
-    if keeper !~ '^\n' && before !~ '\n\s*$'
-      let before .= "\n"
-      if a:special
-        let before .= "\t"
-      endif
-    elseif keeper =~ '^\n' && before =~ '\n\s*$'
-      let keeper = strcharpart(keeper,1)
-    endif
     if type ==# 'V' && keeper =~ '\n\s*\n$'
-      let keeper = strcharpart(keeper,0,strchars(keeper) - 1)
+      let keeper = strcharpart(keeper,1)
     endif
   endif
   if type ==# 'V'
@@ -376,15 +368,19 @@ function! s:dosurround(...) " {{{1
     let scount = scount * matchstr(char,'^\d\+')
     let char = substitute(char,'^\d\+','','')
   endif
-  if char =~ '^ '
-    let char = strpart(char,1)
-    let spc = 1
+  " Apply the formula (2n - 1) to make ysNiw counts refer to the number of strings
+  if char == 'iw'
+    let scount = 2 * scount - 1
   endif
   if char == 'a'
     let char = '>'
   endif
   if char == 'r'
     let char = ']'
+  endif
+  if char =~ '^ '
+    let char = strpart(char,1)
+    let spc = 1
   endif
   let newchar = ""
   if a:0 > 1
@@ -600,7 +596,41 @@ nnoremap <silent> <Plug>Csurround  :<C-U>call <SID>changesurround()<CR>
 nnoremap <silent> <Plug>CSurround  :<C-U>call <SID>changesurround(1)<CR>
 nnoremap <expr>   <Plug>Yssurround '^'.v:count1.<SID>opfunc('setup').'g_'
 nnoremap <expr>   <Plug>YSsurround <SID>opfunc2('setup').'_'
-nnoremap <expr>   <Plug>Ysurround  <SID>opfunc('setup')
+nnoremap <silent> <Plug>Ysurround  :<C-U>call <SID>opfunc_iw()<CR>
+
+function! s:opfunc_iw()
+  let digits = ''
+  let c = s:getchar()
+  while c =~ '^\d\+$'
+    let digits .= c
+    let c = s:getchar()
+  endwhile
+  let n = digits != '' ? str2nr(digits) : v:count1
+  if c ==# 'i' || c ==# 'a'
+    let motion = c . s:getchar()
+  else
+    let motion = c
+  endif
+  let surround = s:inputreplacement()
+  if surround == ''
+    return s:beep()
+  endif
+  if motion ==# 'iw'
+    let n = 2 * n - 1
+  endif
+  let cb_save = &clipboard
+  set clipboard-=unnamed clipboard-=unnamedplus
+  let sel_save = &selection
+  let &selection = 'inclusive'
+  let reg_save = getreg('"')
+  let reg_type = getregtype('"')
+  silent exe 'norm! v' . repeat(motion, n) . 'y'
+  call s:wrapreg('"', surround, '', 0)
+  let &selection = sel_save
+  silent exe 'norm! gv""p`['
+  call setreg('"', reg_save, reg_type)
+  let &clipboard = cb_save
+endfunction
 nnoremap <expr>   <Plug>YSurround  <SID>opfunc2('setup')
 vnoremap <silent> <Plug>VSurround  :<C-U>call <SID>opfunc(visualmode(),visualmode() ==# 'V' ? 1 : 0)<CR>
 vnoremap <silent> <Plug>VgSurround :<C-U>call <SID>opfunc(visualmode(),visualmode() ==# 'V' ? 0 : 1)<CR>
