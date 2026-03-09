@@ -1,3 +1,13 @@
+---
+### Fork note:
+This fork makes it so that the formula (2n - 1) is automatically applied to motions `ysw` including a count (e. g. `ys<N>iw[`), such that N stands for a total number of strings, not strings + whitespaces like in the original.
+
+Also works with multiple digits (e. g. `ys15iw)`).
+
+Count can be typeahead too (e. g. `8ysiw"`).
+
+---
+
 # surround.vim
 
 Surround.vim is all about "surroundings": parentheses, brackets, quotes,
